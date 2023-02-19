@@ -1,0 +1,212 @@
+class Piece
+  attr_reader :color, :type, :x, :y, :moved
+
+  def initialize(color, type, x, y)
+    @color = color
+    @type = type
+    @x = x
+    @y = y
+    @moved = false
+  end
+
+  def move(x, y)
+    @x = x
+    @y = y
+    @moved = true
+  end
+
+  def valid_moves(board)
+    raise NotImplementedError, "Subclasses must implement valid_moves method"
+  end
+end
+
+class King < Piece
+  def initialize(color, x, y)
+    super(color, "king", x, y)
+  end
+
+  def valid_moves(board)
+    moves = []
+    (-1..1).each do |dx|
+      (-1..1).each do |dy|
+        next if dx == 0 && dy == 0
+        x, y = @x + dx, @y + dy
+        next unless board.in_bounds?(x, y)
+        square = board.squares[y][x]
+        if square.piece.nil? || square.piece.color != @color
+          moves << [x, y]
+        end
+      end
+    end
+    moves
+  end
+end
+
+class Queen < Piece
+  def initialize(color, x, y)
+    super(color, "queen", x, y)
+  end
+
+  def valid_moves(board)
+    moves = []
+    # Diagonal moves
+    (-7..7).each do |d|
+      next if d == 0
+      x, y = @x + d, @y + d
+      break unless board.in_bounds?(x, y)
+      square = board.squares[y][x]
+      if square.piece.nil?
+        moves << [x, y]
+      elsif square.piece.color != @color
+        moves << [x, y]
+        break
+      else
+        break
+      end
+    end
+    (-7..7).each do |d|
+      next if d == 0
+      x, y = @x - d, @y + d
+      break unless board.in_bounds?(x, y)
+      square = board.squares[y][x]
+      if square.piece.nil?
+        moves << [x, y]
+      elsif square.piece.color != @color
+        moves << [x, y]
+        break
+      else
+        break
+      end
+    end
+    # Straight moves
+    (-7..7).each do |d|
+      next if d == 0
+      x, y = @x + d, @y
+      break unless board.in_bounds?(x, y)
+      square = board.squares[y][x]
+      if square.piece.nil?
+        moves << [x, y]
+      elsif square.piece.color != @color
+        moves << [x, y]
+        break
+      else
+        break
+      end
+    end
+    (-7..7).each do |d|
+      next if d == 0
+      x, y = @x, @y + d
+      break unless board.in_bounds?(x, y)
+      square = board.squares[y][x]
+      if square.piece.nil?
+        moves << [x, y]
+      elsif square.piece.color != @color
+        moves << [x, y]
+        break
+      else
+        break
+      end
+    end
+    moves
+  end
+end
+
+class Rook < Piece
+  def initialize(color, x, y)
+    super(color, "rook", x, y)
+end
+
+def valid_moves(board)
+moves = []
+# Straight moves
+(-7..7).each do |d|
+next if d == 0
+x, y = @x + d, @y
+break unless board.in_bounds?(x, y)
+square = board.squares[y][x]
+if square.piece.nil?
+moves << [x, y]
+elsif square.piece.color != @color
+moves << [x, y]
+break
+else
+break
+end
+end
+(-7..7).each do |d|
+next if d == 0
+x, y = @x, @y + d
+break unless board.in_bounds?(x, y)
+square = board.squares[y][x]
+if square.piece.nil?
+moves << [x, y]
+elsif square.piece.color != @color
+moves << [x, y]
+break
+else
+break
+end
+end
+moves
+end
+end
+
+class Bishop < Piece
+def initialize(color, x, y)
+super(color, "bishop", x, y)
+end
+
+def valid_moves(board)
+moves = []
+# Diagonal moves
+(-7..7).each do |d|
+next if d == 0
+x, y = @x + d, @y + d
+break unless board.in_bounds?(x, y)
+square = board.squares[y][x]
+if square.piece.nil?
+moves << [x, y]
+elsif square.piece.color != @color
+moves << [x, y]
+break
+else
+break
+end
+end
+(-7..7).each do |d|
+next if d == 0
+x, y = @x - d, @y + d
+break unless board.in_bounds?(x, y)
+square = board.squares[y][x]
+if square.piece.nil?
+moves << [x, y]
+elsif square.piece.color != @color
+moves << [x, y]
+break
+else
+break
+end
+end
+moves
+end
+end
+
+class Knight < Piece
+def initialize(color, x, y)
+super(color, "knight", x, y)
+end
+
+def valid_moves(board)
+moves = []
+offsets = [[2, 1], [1, 2], [-1, 2], [-2, 1], [-2, -1], [-1, -2], [1, -2], [2, -1]]
+offsets.each do |dx, dy|
+x, y = @x + dx, @y + dy
+next unless board.in_bounds?(x, y)
+square = board.squares[y][x]
+if square.piece.nil? || square.piece.color != @color
+moves << [x, y]
+end
+end
+moves
+end
+end
