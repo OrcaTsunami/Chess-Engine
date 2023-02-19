@@ -1,0 +1,148 @@
+class Board
+  attr_accessor :squares, :captured_pieces, :en_passant_square, :en_passant_victim
+
+  def initialize
+    @squares = Array.new(8) { Array.new(8) { Square.new } }
+    @captured_pieces = []
+    @en_passant_square = nil
+    @en_passant_victim = nil
+  end
+
+  def [](x, y)
+    @squares[y][x]
+  end
+
+  def []=(x, y, piece)
+    @squares[y][x].piece = piece
+  end
+
+  def move_piece(from_x, from_y, to_x, to_y)
+    from_square = self[from_x, from_y]
+    to_square = self[to_x, to_y]
+    piece = from_square.piece
+    captured_piece = to_square.piece
+
+    # En passant capture
+    if piece.is_a?(Pawn) && to_square == @en_passant_square
+      captured_piece = self[to_x, from_y].piece
+      self[to_x, from_y].piece = nil
+    end
+
+    # Move the piece
+    to_square.piece = piece
+    from_square.piece = nil
+
+    # Update en passant state
+    if piece.is_a?(Pawn) && (from_y - to_y).abs == 2
+      @en_passant_square = self[to_x, (from_y + to_y) / 2]
+    else
+      @en_passant_square = nil
+      @en_passant_victim = nil
+    end
+
+    # Handle castling
+    if piece.is_a?(King) && (from_x - to_x).abs == 2
+      if to_x > from_x
+        self[to_x - 1, to_y].piece = self[7, to_y].piece
+        self[7, to_y].piece = nil
+      else
+        self[to_x + 1, to_y].piece = self[0, to_y].piece
+        self[0, to_y].piece = nil
+      end
+    end
+
+    # Capture the piece
+    if captured_piece
+      @captured_pieces << captured_piece
+      @en_passant_victim = captured_piece if captured_piece.is_a?(Pawn)
+    end
+  end
+
+  def in_check?(color)
+    king_position = find_king(color)
+    return false if king_position.nil?
+
+    opposing_pieces = pieces.select { |piece| piece.color != color }
+    opposing_pieces.any? { |piece| piece.valid_moves(self).include?(king_position) }
+  end
+
+  def checkmate?(color)
+    return false unless in_check?(color)
+    pieces.select { |piece| piece.color == color }.all? { |piece| piece.valid_moves(self).empty? }
+  end
+
+  def stalemate?(color)
+    return false if in_check?(color)
+    pieces.select { |piece| piece.color == color }.all? { |piece| piece.valid_moves(self).empty? }
+  end
+
+  def find_king(color)
+    squares.flatten.find { |square| square.piece.is_a?(King) && square.piece.color == color }
+  end
+
+  def pieces
+    squares.flatten.map(&:piece).compact
+  end
+
+  def fen
+    fen_parts = []
+    8.downto(1) do |rank|
+      fen_parts << squares[rank - 1].map { |square| square.piece&.to_fen || "1" }.
+  join("").gsub(/1+/, &:length.to_s)
+end
+fen_parts.join("/") + " #{active_color} #{castling_flags} #{en_passant_square_fen} #{halfmove_clock} #{fullmove_number}"
+end
+
+private
+
+def active_color
+pieces.last.color
+end
+
+def castling_flags
+flags = ""
+flags += "K" if can_castle?("white", "k")
+flags += "Q" if can_castle?("white", "q")
+flags += "k" if can_castle?("black", "k")
+flags += "q" if can_castle?("black", "q")
+flags.empty? ? "-" : flags
+end
+
+def can_castle?(color, side)
+king = pieces.find { |piece| piece.is_a?(King) && piece.color == color }
+return false if king.nil?
+return false if in_check?(color)
+case side
+when "k"
+  return false if @squares[king.y][5].piece || @squares[king.y][6].piece
+  rook = @squares[king.y][7].piece
+  return false unless rook.is_a?(Rook) && rook.color == color && rook.moved == false
+  return false if pieces.any? do |piece|
+    piece.color != color && piece.valid_moves(self).include?([5, king.y]) || piece.valid_moves(self).include?([6, king.y])
+  end
+  true
+when "q"
+  return false if @squares[king.y][1].piece || @squares[king.y][2].piece || @squares[king.y][3].piece
+  rook = @squares[king.y][0].piece
+  return false unless rook.is_a?(Rook) && rook.color == color && rook.moved == false
+  return false if pieces.any? do |piece|
+    piece.color != color && piece.valid_moves(self).include?([1, king.y]) || piece.valid_moves(self).include?([2, king.y])
+  end
+  true
+else
+  false
+end
+end
+
+def en_passant_square_fen
+@en_passant_victim&.en_passant_fen || "-"
+end
+
+def halfmove_clock
+0
+end
+
+def fullmove_number
+1
+end
+end
